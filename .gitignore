@@ -1,0 +1,6 @@
+data/
+work/
+results/metrics.json
+__pycache__/
+*.duckdb
+.DS_Store

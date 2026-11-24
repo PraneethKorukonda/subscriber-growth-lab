@@ -1,0 +1,106 @@
+
+$ python src/build.py --data-dir data/kkbox --sample-pct 20 --memory-limit 4GB
+transactions: ['data/kkbox/data/churn_comp_refresh/transactions_v2.csv', 'data/kkbox/transactions.csv'] 
+user logs: none 
+user logs streamed from .7z: ['data/kkbox/user_logs.csv.7z', 'data/kkbox/user_logs_v2.csv.7z'] 
+members: ['data/kkbox/members_v3.csv']
+Loading transactions ...
+Building subscription spells ...
+Reading user logs from user_logs.csv.7z (streamed, not unzipped). The full user_logs is ~30 GB, so this can take 20-60 minutes ...
+Reading user logs from user_logs_v2.csv.7z (streamed, not unzipped). The full user_logs is ~30 GB, so this can take 20-60 minutes ...
+  summarizing listening by user and month: chunk 1/8
+  summarizing listening by user and month: chunk 2/8
+  summarizing listening by user and month: chunk 3/8
+  summarizing listening by user and month: chunk 4/8
+  summarizing listening by user and month: chunk 5/8
+  summarizing listening by user and month: chunk 6/8
+  summarizing listening by user and month: chunk 7/8
+  summarizing listening by user and month: chunk 8/8
+  sample_pct: 20
+  transaction_rows_raw: 4605240
+  transaction_rows_clean: 4602368
+  paid_transactions: 4420541
+  cancellations: 177844
+  users: 482490
+  spells: 606904
+  subscriber_months: 5322612
+  log_user_months: 5585516
+  log_months_covered: 27
+  share_discounted_payments: 0.030345643517938
+  share_auto_renew_payments: 0.8423238241654133
+  build_seconds: 601.2
+  done in 616s
+
+$ python src/growth.py
+            active    new  ...  retention_rate  resurrection_rate
+month                      ...                                   
+2016-08-01  232292  13013  ...        0.950971           0.036185
+2016-09-01  240668  13123  ...        0.965074           0.021315
+2016-10-01  247314  19694  ...        0.926812           0.028070
+2016-11-01  271136  29182  ...        0.948313           0.042246
+2016-12-01  244471   8425  ...        0.859310           0.016877
+2017-01-01  243259   7525  ...        0.952174           0.013670
+2017-02-01  243951   7386  ...        0.962632           0.010654
+2017-03-01  245716   6947  ...        0.969047           0.010229
+
+[8 rows x 6 columns]
+              listening  subscriber_months  churn_next_month
+0     listened 1-9 days             678491          0.109102
+1     listened 10+ days            1862031          0.025062
+2  paid, did not listen             635062          0.126367
+{'retention +1 pt': np.float64(7.692958298688968), 'resurrection +1 pt': np.float64(8.17970315999743), 'new subscribers +10%': np.float64(4.1731379277782255)}
+  done in 26s
+
+$ python src/survival.py
+hazard rows: train 1,500,316 (sampled 42%), test 731,681 (sampled 100%)
+                     spells  share_censored  ...  survival_180d  survival_365d
+auto-renew start   230315.0        0.595854  ...       0.656568       0.588321
+manual start       234911.0        0.253568  ...       0.321025       0.252166
+30-day plan        303763.0        0.509147  ...       0.561141       0.482543
+other plan length  161463.0        0.260989  ...       0.344131       0.293061
+discounted start    53970.0        0.064554  ...       0.080170       0.062253
+full-price start   411256.0        0.470062  ...       0.540702       0.465826
+
+[6 rows x 6 columns]
+        month  subscribers  ...  trailing_3m_rate  same_month_last_year
+0  2016-12-01       244471  ...      22564.932714          22264.848131
+1  2017-01-01       243259  ...      21262.673353          18049.308443
+2  2017-02-01       243951  ...      20161.135410          19877.767306
+
+[3 rows x 6 columns]
+mean abs % error: {'hazard_model': 17.078694971238253, 'trailing_3m_rate': 104.21210358081663, 'same_month_last_year': 91.42546970270996}
+  done in 287s
+
+$ python src/engagement.py
+  active_days  subscribers  retained_180d
+0           0        30355       0.776149
+1         1-4        13488       0.806124
+2         5-9        14639       0.773277
+3       10-14        15521       0.780427
+4       15-19        16869       0.773134
+5       20-24        19395       0.786543
+6       25-31        37267       0.810664
+threshold: {'threshold_days': 25, 'youden_j': 0.033158501209625296, 'share_above': 0.25259940081608306, 'retained_above': 0.8106635897711112, 'retained_below': 0.7814033210298639, 'ratio': 1.0374457952171015}
+  done in 4s
+
+$ python src/causal.py --treatment discount
+units: 363,235  treated: 47,571 (13.1%)
+renewed {'n': 363235, 'treated': 47571, 'naive': -0.7239, 'naive_ci': [-0.726969363602885, -0.7209129735500553], 'outcome_regression': -0.1882, 'ipw': -0.4166, 'aipw': -0.1938, 'aipw_ci': [-0.19781381372515536, -0.18975472411690222], 'aipw_trimmed_05_95': -0.3209, 'share_outside_05_95': 0.9271}
+active_180d {'n': 262318, 'treated': 46354, 'naive': -0.6414, 'naive_ci': [-0.6441174959796332, -0.6386438886669492], 'outcome_regression': -0.1541, 'ipw': -0.3733, 'aipw': -0.1594, 'aipw_ci': [-0.16406616089643528, -0.15481393071207378], 'aipw_trimmed_05_95': -0.1524, 'share_outside_05_95': 0.9164}
+placebo_active_days_2m_before {'n': 363235, 'treated': 47571, 'naive': -9.4201, 'naive_ci': [-9.473886179032512, -9.36638894034991], 'outcome_regression': 0.081, 'ipw': -3.3882, 'aipw': 0.056, 'aipw_ci': [0.018728545720471168, 0.09328402842904554], 'aipw_trimmed_05_95': 0.134, 'share_outside_05_95': 0.9271}
+        covariate   smd_raw  smd_weighted
+      tenure_days -1.404920     -0.587843
+spell_tenure_days -1.274250     -0.490409
+ prev_active_days -1.212682     -0.345430
+      gender_code -1.070230     -0.389362
+    is_auto_renew  0.917530      0.853396
+prev_unique_songs -0.768064     -0.232846
+payment_method_id  0.710597      0.538174
+       prev_hours -0.702914     -0.212635
+  done in 435s
+
+$ python src/report.py
+wrote /Users/praneethkorukonda/Downloads/subscriber-growth-lab/results/RESULTS.md
+  done in 1s
+
+Results: results/RESULTS.md and results/figures/
